@@ -1,0 +1,94 @@
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from bs4 import BeautifulSoup
+from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
+import json
+import time
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+api_url = os.getenv('ApiUrl')
+
+def extract_job(): 
+    chrome_service = Service(ChromeDriverManager().install())
+    chrome_options = Options()
+    
+    # Initialize the driver
+    driver = webdriver.Chrome(service=chrome_service, options=chrome_options)
+    
+    # URL of the webpage
+    url = 'https://topdev.vn/it-jobs?src=topdev.vn&medium=mainmenu'
+    driver.get(url)
+    
+    try:
+        WebDriverWait(driver, 10).until(
+            EC.presence_of_all_elements_located((By.CLASS_NAME, "mt-4"))
+        )
+    except Exception as e:
+        print("Error waiting for elements:", e)
+        driver.quit()
+        return
+    
+    driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+    time.sleep(2)
+    
+    soup = BeautifulSoup(driver.page_source, 'html.parser')
+
+    job_list = []
+    jobs = soup.find_all('li', class_='mb-4 last:mb-0')
+    
+    for job in jobs:
+        job_data = {}
+        
+        # Get job link and extract job_Id
+        job_link = job.find('a', href=True)
+        if job_link:
+            job_url = job_link['href']
+            job_data['job_Id'] = job_url.split('-')[-1].split('?')[0]  # Extract job_id from URL
+            job_data['ref_link'] = 'https://topdev.vn' + job_url
+        
+        # Get job title
+        job_title = job.find('h3', class_='line-clamp-1')
+        job_data['title'] = job_title.text.strip() if job_title else ""
+        
+        # Get company name
+        company_name = job.find('div', class_='mt-1 line-clamp-1')
+        job_data['company_name'] = company_name.text.strip() if company_name else ""
+        
+        # Get salary (if available)
+        salary = job.find('p', class_='text-gray-500')
+        job_data['salary'] = salary.text.strip() if salary else ""
+        
+        # Get district (if available)
+        district = job.find('div', class_='flex flex-wrap items-end gap-2 text-gray-500')
+        job_data['district_name'] = district.text.strip() if district else ""
+        
+        # Get image (if available)
+        image_tag = job.find('img', class_='h-28 w-40 max-w-full rounded-xl bg-white object-contain p-2')
+        job_data['image'] = image_tag['src'] if image_tag else ""
+        
+        # Placeholder data
+        job_data['description'] = "Pending"
+        job_data['requirement'] = "Pending"
+        job_data['salary_from'] = job_data['salary']  # Assume salary_from is the same as salary
+        job_data['salary_to'] = job_data['salary']    # Assume salary_to is the same as salary
+        job_data['companyId'] = job_data['job_Id']
+        job_data['expire_on'] = ""
+        job_data['ref_job_Id'] = job_data['job_Id']
+        
+        job_list.append(job_data)
+    
+    driver.quit()
+
+    # Convert the list to JSON
+    return json.dumps(job_list, indent=4, ensure_ascii=False)
+
+# Call the function to extract the data
+data = extract_job()
+print(data)

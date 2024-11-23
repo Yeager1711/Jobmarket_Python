@@ -72,8 +72,13 @@ def extract_feature_job_details():
 
         # Extract district/address
         address_tag = soup.find("div", class_="address")
-        district = address_tag.get("data-original-title", "Unknown District") if address_tag else "Unknown District"
-
+        if address_tag:
+            # Use BeautifulSoup to remove HTML tags and get the text
+            district_html = address_tag.get("data-original-title", "")
+            district_soup = BeautifulSoup(district_html, "html.parser")
+            district = district_soup.get_text(strip=True)
+        else:
+            district = "Unknown District"
         # Extract images
         images = soup.find_all("img", class_="img-responsive")
         image_urls = [img['src'] for img in images if 'src' in img.attrs]

@@ -110,7 +110,7 @@ def extract_feature_job_details():
             "salary_from": salary_from,
             "salary_to": salary_to,
             "companyId": data_job_id,
-            "expire_on": "",
+            "expire_on": "31/12/2024",
             "ref_job_Id": data_job_id,
             "ref_link": ref_link
         }
